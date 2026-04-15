@@ -27,11 +27,10 @@ import com.sonymobile.tools.gerrit.gerritevents.GerritQueryException;
 import com.sonymobile.tools.gerrit.gerritevents.GerritQueryHandler;
 import com.sonymobile.tools.gerrit.gerritevents.ssh.Authentication;
 
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileItemFactory;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.fileupload2.core.DiskFileItem;
+import org.apache.commons.fileupload2.core.DiskFileItemFactory;
+import org.apache.commons.fileupload2.core.FileUploadException;
+import org.apache.commons.fileupload2.jakarta.servlet5.JakartaServletFileUpload;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -48,10 +47,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class AdminServlet extends HttpServlet {
     private static final long serialVersionUID = -9175363090552720328L;
@@ -151,9 +150,9 @@ public class AdminServlet extends HttpServlet {
         }
 
         File privateKeyPath;
-        FileItemFactory factory = new DiskFileItemFactory();
-        ServletFileUpload upload = new ServletFileUpload(factory);
-        List<FileItem> items;
+        DiskFileItemFactory factory = DiskFileItemFactory.builder().get();
+        JakartaServletFileUpload<DiskFileItem, DiskFileItemFactory> upload = new JakartaServletFileUpload<>(factory);
+        List<DiskFileItem> items;
 
         try {
             // Unfortunately "multipart" makes it so every field comes through as a "FileItem"
@@ -212,8 +211,8 @@ public class AdminServlet extends HttpServlet {
         }
     }
 
-    private String getAction(List<FileItem> items) {
-        for (FileItem item : items) {
+    private String getAction(List<DiskFileItem> items) {
+        for (DiskFileItem item : items) {
             final String fieldName = item.getFieldName();
             if (FIELD_ACTION.equals(fieldName)) return item.getString();
         }
@@ -221,11 +220,11 @@ public class AdminServlet extends HttpServlet {
         return null;
     }
 
-    private void setAllFields(final List<FileItem> items) {
+    private void setAllFields(final List<DiskFileItem> items) {
         Set<String> allFields = Sets.newHashSet();
         List<String> idsOfSelectedGerritProjects = Lists.newArrayList();
 
-        for (FileItem item : items) {
+        for (DiskFileItem item : items) {
             final String fieldName = item.getFieldName();
             allFields.add(fieldName);
 
@@ -269,10 +268,10 @@ public class AdminServlet extends HttpServlet {
         configurationManager.setIdsOfKnownGerritProjects(idsOfSelectedGerritProjects);
     }
 
-    private File doUploadPrivateKey(final List<FileItem> items, final String sshHostname) throws IOException {
+    private File doUploadPrivateKey(final List<DiskFileItem> items, final String sshHostname) throws IOException {
         File privateKeyPath = null;
 
-        for (FileItem item : items) {
+        for (DiskFileItem item : items) {
             if (item.getFieldName().equals(GerritConfiguration.FIELD_SSH_PRIVATE_KEY) && item.getSize() > 0) {
                 File dataDir = new File(jiraHome.getDataDirectory(), StringUtils.join(PACKAGE_PARTS, File.separatorChar));
 
@@ -300,7 +299,7 @@ public class AdminServlet extends HttpServlet {
                 IOUtils.closeQuietly(is);
                 IOUtils.closeQuietly(fos);
 
-                item.delete();
+                try { item.delete(); } catch (IOException ignored) {}
                 break;
             }
         }

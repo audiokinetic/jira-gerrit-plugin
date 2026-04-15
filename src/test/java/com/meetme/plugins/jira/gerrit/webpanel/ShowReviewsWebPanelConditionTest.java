@@ -5,7 +5,6 @@ import com.meetme.plugins.jira.gerrit.data.IssueReviewsManager;
 import com.meetme.plugins.jira.gerrit.data.dto.GerritChange;
 
 import com.atlassian.jira.issue.Issue;
-import com.atlassian.jira.project.MockProject;
 import com.atlassian.jira.project.Project;
 import com.atlassian.jira.project.ProjectManager;
 import com.google.common.collect.Lists;
@@ -25,7 +24,7 @@ import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -46,15 +45,12 @@ public class ShowReviewsWebPanelConditionTest {
     @Mock
     private ProjectManager projectManager;
 
-    private static final List<Project> projects = Collections.unmodifiableList(new ArrayList<MockProject>() {{
-        add(new MockProject(0L, "KEY_0L", "NAME_0L"));
-        add(new MockProject(1L, "KEY_1L", "NAME_1L"));
-        add(new MockProject(2L, "KEY_2L", "NAME_2L"));
-    }});
+    private List<Project> projects;
 
     @Before
     public void setUp() {
         initMocks(this);
+        projects = createMockProjects();
         when(issue.getProjectId()).thenReturn(1L);
         when(issue.getId()).thenReturn(10000000L);
         when(projectManager.getProjects()).thenReturn(projects);
@@ -66,8 +62,8 @@ public class ShowReviewsWebPanelConditionTest {
     public void shouldDisplayWithAlwaysFlag() throws GerritQueryException {
         when(gerritConfiguration.getShowsEmptyPanel()).thenReturn(true);
         when(issueReviewsManager.getReviewsForIssue(any(Issue.class))).thenReturn(Lists.newArrayList());
-        when(gerritConfiguration.getIdsOfKnownGerritProjects()).thenReturn(projects.stream().map(p -> p.getId()
-                .toString()).collect(Collectors.toList()));
+        List<String> ids = projects.stream().map(p -> p.getId().toString()).collect(Collectors.toList());
+        when(gerritConfiguration.getIdsOfKnownGerritProjects()).thenReturn(ids);
 
         assertTrue(showReviewsWebPanelCondition.shouldDisplay(singletonMap("issue", issue)));
     }
@@ -98,24 +94,26 @@ public class ShowReviewsWebPanelConditionTest {
     public void shouldDisplayProjectIsOnWhiteList() throws Exception {
         when(gerritConfiguration.getShowsEmptyPanel()).thenReturn(false);
         when(issueReviewsManager.getReviewsForIssue(any(Issue.class))).thenReturn(singletonList(new GerritChange()));
-        when(gerritConfiguration.getIdsOfKnownGerritProjects()).thenReturn(projects.stream().map(p -> p.getId()
-                .toString()).collect(Collectors.toList()));
+        List<String> ids = projects.stream().map(p -> p.getId().toString()).collect(Collectors.toList());
+        when(gerritConfiguration.getIdsOfKnownGerritProjects()).thenReturn(ids);
         assertTrue(showReviewsWebPanelCondition.shouldDisplay(singletonMap("issue", issue)));
     }
 
     @Test
     public void shouldDisplayProjectIsNotOnWhiteList() {
         when(gerritConfiguration.getShowsEmptyPanel()).thenReturn(false);
-        when(gerritConfiguration.getIdsOfKnownGerritProjects()).thenReturn(projects.stream().filter(project -> !project
-                .getId().equals(1L)).map(project -> project.getId().toString()).collect(Collectors.toList()));
+        List<String> ids = projects.stream()
+                .filter(project -> !project.getId().equals(1L))
+                .map(project -> project.getId().toString())
+                .collect(Collectors.toList());
+        when(gerritConfiguration.getIdsOfKnownGerritProjects()).thenReturn(ids);
         assertFalse(showReviewsWebPanelCondition.shouldDisplay(singletonMap("issue", issue)));
     }
 
     @Test
     public void shouldDisplayNoConnectionToGerrit() throws GerritQueryException {
-
-        when(gerritConfiguration.getIdsOfKnownGerritProjects()).thenReturn(projects.stream().map(p -> p.getId()
-                .toString()).collect(Collectors.toList()));
+        List<String> ids = projects.stream().map(p -> p.getId().toString()).collect(Collectors.toList());
+        when(gerritConfiguration.getIdsOfKnownGerritProjects()).thenReturn(ids);
         when(issueReviewsManager.getReviewsForIssue(any(Issue.class))).thenThrow(new GerritQueryException());
 
         when(gerritConfiguration.getShowsEmptyPanel()).thenReturn(true);
@@ -123,6 +121,19 @@ public class ShowReviewsWebPanelConditionTest {
 
         when(gerritConfiguration.getShowsEmptyPanel()).thenReturn(false);
         assertFalse(showReviewsWebPanelCondition.shouldDisplay(singletonMap("issue", issue)));
+    }
+
+    private static List<Project> createMockProjects() {
+        List<Project> list = new ArrayList<>();
+        for (long i = 0; i < 3; i++) {
+            Project p = mock(Project.class);
+            final long id = i;
+            when(p.getId()).thenReturn(id);
+            when(p.getKey()).thenReturn("KEY_" + i + "L");
+            when(p.getName()).thenReturn("NAME_" + i + "L");
+            list.add(p);
+        }
+        return Collections.unmodifiableList(list);
     }
 
     @Test
