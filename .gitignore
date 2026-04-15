@@ -9,3 +9,5 @@ projectFilesBackup/
 *.iml
 
 .DS_Store
+
+todo/*.md
