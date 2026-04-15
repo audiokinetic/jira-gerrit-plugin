@@ -75,7 +75,7 @@ public class GerritReviewsTabPanel extends AbstractIssueTabPanel2 implements Iss
         if (!configuration.isSshValid()) {
             // Show not-configured error.
             issueActions = new ArrayList<>();
-            issueActions.add(new GenericMessageAction("Configure Gerrit in Administration interface first."));
+            issueActions.add(new GenericMessageAction(i18n.getText("gerrit.tabpanel.not_configured")));
         } else {
             // List of items we will be showing in the tab panel.
             issueActions = getActions(request.issue());
