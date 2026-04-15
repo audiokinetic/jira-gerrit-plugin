@@ -260,6 +260,8 @@
         <method>com.meetme.plugins.jira.gerrit.data.dto.GerritChange#isOpen()</method>
         <method>com.meetme.plugins.jira.gerrit.data.dto.GerritChange#getPatchSet()</method>
         <method>com.meetme.plugins.jira.gerrit.data.dto.GerritPatchSet#getApprovalsForLabel(java.lang.String)</method>
+        <method>com.meetme.plugins.jira.gerrit.data.dto.GerritPatchSet#getApprovals()</method>
+        <method>com.meetme.plugins.jira.gerrit.data.dto.GerritApproval#getUser()</method>
         <method>com.meetme.plugins.jira.gerrit.data.dto.GerritApproval#getValueAsInt()</method>
     </velocity-allowlist>
 </atlassian-plugin>
