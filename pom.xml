@@ -20,7 +20,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.meetme.plugins.jira</groupId>
     <artifactId>gerrit-plugin</artifactId>
-    <version>4.2-SNAPSHOT</version>
+    <version>4.3-SNAPSHOT</version>
 
     <organization>
         <name>MeetMe, Inc.</name>
@@ -61,6 +61,27 @@
         </developer>
     </developers>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- Force transitive JAXB deps to Maven Central versions (java.net repos are dead/HTTP-blocked) -->
+            <dependency>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>2.3.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.istack</groupId>
+                <artifactId>istack-commons-runtime</artifactId>
+                <version>3.0.12</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.fastinfoset</groupId>
+                <artifactId>FastInfoset</artifactId>
+                <version>1.2.16</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <!-- Base Atlassian requirements -->
         <dependency>
@@ -74,23 +95,18 @@
             <artifactId>jira-core</artifactId>
             <version>${jira.version}</version>
             <scope>provided</scope>
+            <exclusions>
+                <!-- jndi is bundled in the JDK; the standalone artifact was never on Maven Central -->
+                <exclusion>
+                    <groupId>jndi</groupId>
+                    <artifactId>jndi</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.atlassian.core</groupId>
             <artifactId>atlassian-core-user</artifactId>
             <version>9.1.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.atlassian.jira</groupId>
-            <artifactId>jira-tests</artifactId>
-            <version>${jira.test.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.atlassian.jira</groupId>
-            <artifactId>jira-func-tests</artifactId>
-            <version>${jira.test.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.atlassian.plugins</groupId>
@@ -127,9 +143,17 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <!-- 4.x is the last major version compatible with Java 17 and with backward-compat APIs;
+                 1.x used CGLib reflection blocked by Java 9+ module system -->
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-            <version>1.9.5</version>
+            <artifactId>mockito-core</artifactId>
+            <version>4.11.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-all</artifactId>
+            <version>1.3</version>
             <scope>test</scope>
         </dependency>
         <!-- Project Atlassian requirements -->
@@ -159,21 +183,21 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
-            <version>2.4</version>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>5.0.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>javax.ws.rs</groupId>
-            <artifactId>jsr311-api</artifactId>
-            <version>1.1.1</version>
+            <groupId>jakarta.ws.rs</groupId>
+            <artifactId>jakarta.ws.rs-api</artifactId>
+            <version>3.0.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-            <version>2.2.12</version>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+            <version>3.0.1</version>
             <scope>provided</scope>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
@@ -209,9 +233,10 @@
             <version>0.2.23</version>
         </dependency>
         <dependency>
-            <groupId>commons-fileupload</groupId>
-            <artifactId>commons-fileupload</artifactId>
-            <version>1.4</version>
+            <!-- Jakarta Servlet 5.x compatible file upload (replaces commons-fileupload 1.x which used javax.servlet) -->
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-fileupload2-jakarta-servlet5</artifactId>
+            <version>2.0.0-M2</version>
         </dependency>
     </dependencies>
 
@@ -261,8 +286,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>17</source>
+                    <target>17</target>
                 </configuration>
             </plugin>
 			<plugin>
@@ -277,19 +302,19 @@
     </build>
 
     <properties>
-        <jira.version>10.5.1</jira.version>
-        <amps.version>9.1.1</amps.version>
+        <jira.version>11.3.4</jira.version>
+        <amps.version>9.2.0</amps.version>
         <plugin.testrunner.version>1.2.3</plugin.testrunner.version>
         <atlassian.plugin.key>${project.groupId}.${project.artifactId}</atlassian.plugin.key>
         <testkit.version>6.3.11</testkit.version>
         <quick.reload.version>1.30.5</quick.reload.version>
 
-        <jira.test.version>10.5.1</jira.test.version>
-        <jira.data.version>10.5.1</jira.data.version>
+        <jira.test.version>11.3.4</jira.test.version>
+        <jira.data.version>11.3.4</jira.data.version>
         <jira.rest.version>3.0.8</jira.rest.version>
         <atlas.template.version>3.0.0</atlas.template.version>
         <atlas.concurrent.version>3.0.0</atlas.concurrent.version>
-        <atlas.sal.version>3.0.5</atlas.sal.version>
+        <atlas.sal.version>7.0.2</atlas.sal.version>
     </properties>
 
     <profiles>
@@ -326,6 +351,13 @@
         <repository>
             <id>atlassian-plugin-sdk</id>
             <url>file:///${env.ATLASSIAN_SDK}/repository</url>
+        </repository>
+        <!-- OpenSAML 5.x is published to the Shibboleth repository, not Maven Central -->
+        <repository>
+            <id>shibboleth-releases</id>
+            <url>https://build.shibboleth.net/maven/releases/</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
         </repository>
     </repositories>
 

@@ -8,8 +8,6 @@ import com.atlassian.core.util.collection.EasyList;
 import com.atlassian.core.util.map.EasyMap;
 import com.atlassian.jira.component.ComponentAccessor;
 import com.atlassian.jira.issue.MutableIssue;
-import com.atlassian.jira.mock.component.MockComponentWorker;
-import com.atlassian.jira.mock.issue.MockIssue;
 import com.atlassian.jira.user.ApplicationUser;
 import com.opensymphony.workflow.WorkflowContext;
 import com.sonymobile.tools.gerrit.gerritevents.GerritQueryException;
@@ -32,7 +30,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
 public abstract class AbstractWorkflowTest {
     @SuppressWarnings("rawtypes")
     protected Map transientVars, args;
-    protected MockComponentWorker mockComponents;
+    protected ComponentAccessor.Worker mockComponents;
     protected MutableIssue mockIssue;
 
     @Mock
@@ -66,8 +64,8 @@ public abstract class AbstractWorkflowTest {
     }
 
     private void createMocks() {
-        mockComponents = new MockComponentWorker();
-        mockIssue = new MockIssue();
+        mockComponents = mock(ComponentAccessor.Worker.class);
+        mockIssue = mock(MutableIssue.class);
 
         when(mockUser.getName()).thenReturn("milton");
     }
@@ -76,7 +74,7 @@ public abstract class AbstractWorkflowTest {
         ComponentAccessor.initialiseWorker(mockComponents);
         setUpConfiguration();
 
-        mockIssue.setKey("FOO-123");
+        when(mockIssue.getKey()).thenReturn("FOO-123");
 
         transientVars = EasyMap.build("issue", mockIssue, "context", workflowContext);
         args = EasyMap.build("username", mockUser.getName());
