@@ -61,8 +61,6 @@
     <!-- Admin panel -->
     <web-resource name="Admin Web Resources" key="admin-resources">
         <dependency>com.atlassian.auiplugin:ajs</dependency>
-        <dependency>com.atlassian.auiplugin:aui-select2</dependency>
-        <!--<resource type="download" name="admin.js" location="js/admin.js" />-->
     </web-resource>
 
     <web-item name="Gerrit Admin" application="jira" key="jira-menu-item" section="admin_plugins_menu/source_control" weight="10">
@@ -93,7 +91,6 @@
     <web-resource name="GerritTabPanelResources" key="gerritReviewsTabPanel">
         <context>jira.view.issue</context>
         <dependency>jira.webresources:viewissue</dependency>
-        <!-- <resource type="download" name="tabpanel.js" location="js/gerrit-reviews-tabpanel.js" /> -->
         <resource name="tabpanel.css" location="styles/gerrit-reviews-tabpanel.css" type="download" />
         <resource name="images/" location="images/" type="download" />
     </web-resource>
