@@ -19,7 +19,6 @@ import com.atlassian.cache.Cache;
 import com.atlassian.cache.CacheException;
 import com.atlassian.cache.CacheManager;
 import com.atlassian.cache.CacheSettingsBuilder;
-import com.atlassian.core.user.preferences.Preferences;
 import com.atlassian.jira.issue.Issue;
 import com.atlassian.jira.issue.IssueManager;
 import com.sonymobile.tools.gerrit.gerritevents.GerritQueryException;
@@ -52,7 +51,7 @@ public class IssueReviewsImpl implements IssueReviewsManager {
         this.jiraIssueManager = jiraIssueManager;
         this.cache = cacheManager.getCache(
                 IssueReviewsManager.class.getName() + ".issueChanges.cache",
-                cacheLoader, //new IssueReviewsCacheLoader(configuration),
+                cacheLoader,
                 new CacheSettingsBuilder()
                         .flushable()
                         .statisticsEnabled()
@@ -79,9 +78,6 @@ public class IssueReviewsImpl implements IssueReviewsManager {
                 if (changes != null) gerritChanges.addAll(changes);
             } catch (CacheException exc) {
                 if (exc.getCause() instanceof GerritQueryException) {
-                    // TODO: is this really necessary?
-                    // If we swallow the error, then there's no indication on the UI that an error occurred.
-                    // The CacheLoader has to wrap the underlying exception in CacheException in order to throw it.
                     throw (GerritQueryException) exc.getCause();
                 }
 
@@ -94,21 +90,15 @@ public class IssueReviewsImpl implements IssueReviewsManager {
     }
 
     @Override
-    public boolean doApprovals(Issue issue, List<GerritChange> changes, String args, Preferences prefs) throws IOException {
+    public boolean doApprovals(Issue issue, List<GerritChange> changes, String args) throws IOException {
         Set<String> issueKeys = getIssueKeys(issue);
+        GerritCommand command = new GerritCommand(configuration);
 
         boolean result = true;
         for (String issueKey : issueKeys) {
-            GerritCommand command = new GerritCommand(configuration, prefs);
-
             boolean commandResult = command.doReviews(changes, args);
             result &= commandResult;
-
-            if (log.isDebugEnabled()) {
-                log.trace("doApprovals " + issueKey + ", " + changes + ", " + args + "; result=" + commandResult);
-            }
-
-            // Something probably changed!
+            log.debug("doApprovals {}, changes={}, args={}; result={}", issueKey, changes, args, commandResult);
             cache.remove(issueKey);
         }
 

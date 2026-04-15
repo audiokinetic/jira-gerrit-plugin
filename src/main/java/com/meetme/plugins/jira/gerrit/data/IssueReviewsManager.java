@@ -15,12 +15,8 @@ package com.meetme.plugins.jira.gerrit.data;
 
 import com.meetme.plugins.jira.gerrit.data.dto.GerritChange;
 
-import com.atlassian.core.user.preferences.Preferences;
 import com.atlassian.jira.issue.Issue;
 import com.sonymobile.tools.gerrit.gerritevents.GerritQueryException;
-import com.sonymobile.tools.gerrit.gerritevents.GerritQueryHandler;
-
-import net.sf.json.JSONObject;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,21 +36,19 @@ public interface IssueReviewsManager {
      * Gets all Gerrit reviews related to the {@link Issue#getKey() specific issue key}.
      *
      * @param issue the JIRA issue
-     * @return A list of {@link JSONObject}s, as retrieved from Gerrit.
+     * @return A list of {@link GerritChange}s, as retrieved from Gerrit.
      * @throws GerritQueryException If any failure occurs while querying the Gerrit server.
-     * @see GerritQueryHandler
      */
     List<GerritChange> getReviewsForIssue(Issue issue) throws GerritQueryException;
 
     /**
-     * Performs approvals/reviews of all changes.
+     * Performs approvals/reviews of all changes using the system-level Gerrit credentials.
      *
      * @param issue the JIRA issue
      * @param changes the set of Gerrit changes
-     * @param args arguments to add to each approval
-     * @param prefs the {@link Preferences} for the viewing user
-     * @return whether the approvals were successful
-     * @throws IOException if so
+     * @param args arguments to add to each approval (e.g. {@code "--verified +1 --submit"})
+     * @return whether all approvals were successful
+     * @throws IOException if an SSH communication error occurs
      */
-    boolean doApprovals(Issue issue, List<GerritChange> changes, String args, Preferences prefs) throws IOException;
+    boolean doApprovals(Issue issue, List<GerritChange> changes, String args) throws IOException;
 }
