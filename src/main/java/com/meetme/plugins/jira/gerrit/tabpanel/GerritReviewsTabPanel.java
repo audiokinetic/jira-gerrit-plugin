@@ -25,8 +25,6 @@ import com.atlassian.jira.issue.Issue;
 import com.atlassian.jira.issue.tabpanels.GenericMessageAction;
 import com.atlassian.jira.plugin.issuetabpanel.*;
 import com.atlassian.jira.user.ApplicationUser;
-import com.atlassian.jira.user.UserUtils;
-import com.atlassian.jira.user.util.UserManager;
 import com.atlassian.sal.api.ApplicationProperties;
 import com.atlassian.sal.api.message.I18nResolver;
 import com.sonymobile.tools.gerrit.gerritevents.GerritQueryException;
@@ -52,13 +50,9 @@ public class GerritReviewsTabPanel extends AbstractIssueTabPanel2 implements Iss
     private final GerritConfiguration configuration;
     private final IssueReviewsManager reviewsManager;
     private final I18nResolver i18n;
-
-    @Deprecated
-    private final UserManager userManager;
     private final UserSearchService userSearchService;
 
     public GerritReviewsTabPanel(
-            @Deprecated UserManager userManager,
             UserSearchService userSearchService,
             DateTimeFormatter dateTimeFormatter,
             ApplicationProperties applicationProperties,
@@ -66,7 +60,6 @@ public class GerritReviewsTabPanel extends AbstractIssueTabPanel2 implements Iss
             IssueReviewsManager reviewsManager,
             I18nResolver i18n
     ) {
-        this.userManager = userManager;
         this.userSearchService = userSearchService;
         this.dateTimeFormatter = dateTimeFormatter;
         this.applicationProperties = applicationProperties;
@@ -79,7 +72,7 @@ public class GerritReviewsTabPanel extends AbstractIssueTabPanel2 implements Iss
     public GetActionsReply getActions(GetActionsRequest request) {
         List<IssueAction> issueActions;
 
-        if (configuration.getSshHostname() == null || configuration.getSshUsername() == null || configuration.getSshPrivateKey() == null) {
+        if (!configuration.isSshValid()) {
             // Show not-configured error.
             issueActions = new ArrayList<>();
             issueActions.add(new GenericMessageAction("Configure Gerrit in Administration interface first."));
@@ -110,7 +103,7 @@ public class GerritReviewsTabPanel extends AbstractIssueTabPanel2 implements Iss
      * @return the set of {@link IssueAction}s for the issue
      */
     private List<IssueAction> getActions(Issue issue) {
-        log.debug("Getting actions for issue: {0}", issue.getKey());
+        log.debug("Getting actions for issue: {}", issue.getKey());
 
         List<IssueAction> issueActions = new ArrayList<>();
         List<GerritChange> reviews;
@@ -129,7 +122,6 @@ public class GerritReviewsTabPanel extends AbstractIssueTabPanel2 implements Iss
             for (GerritChange change : reviews) {
                 setUsersForChangeApprovals(change);
                 issueActions.add(new GerritReviewIssueAction(descriptor(), change, dateTimeFormatter, applicationProperties.getBaseUrl()));
-                // issueActions.add(new GenericMessageAction("<pre>" + obj.toString(4) + "</pre>"));
             }
         }
 
@@ -137,30 +129,15 @@ public class GerritReviewsTabPanel extends AbstractIssueTabPanel2 implements Iss
     }
 
     private ApplicationUser getUserByEmail(String email) {
-        ApplicationUser user = null;
-
-        if (email != null) {
-            Iterator<ApplicationUser> users = userSearchService.findUsersByEmail(email).iterator();
-            if (users.hasNext()) user = users.next();
-
-            if (user == null) user = UserUtils.getUserByEmail(email);
-
-            // if (user == null) {
-            //     for (ApplicationUser iUser : userManager.getUsers()) {
-            //         if (email.equalsIgnoreCase(iUser.getEmailAddress())) {
-            //             user = iUser;
-            //             break;
-            //         }
-            //     }
-            // }
+        if (email == null) {
+            return null;
         }
-
-        return user;
+        Iterator<ApplicationUser> users = userSearchService.findUsersByEmail(email).iterator();
+        return users.hasNext() ? users.next() : null;
     }
 
     private boolean isConfigurationReady() {
-        return configuration.getSshHostname() != null && configuration.getSshUsername() != null
-                && configuration.getSshPrivateKey() != null && configuration.getSshPrivateKey().exists();
+        return configuration.isSshValid();
     }
 
     private void setUsersForChangeApprovals(GerritChange change) {
