@@ -15,9 +15,9 @@ package com.meetme.plugins.jira.gerrit.webpanel;
 
 import com.meetme.plugins.jira.gerrit.SessionKeys;
 
-import webwork.action.ActionContext;
-
 import com.atlassian.jira.issue.Issue;
+import com.atlassian.jira.plugin.webfragment.JiraWebContext;
+import com.atlassian.jira.plugin.webfragment.model.JiraHelper;
 import com.atlassian.jira.security.JiraAuthenticationContext;
 import com.atlassian.jira.util.I18nHelper;
 import com.atlassian.jira.util.velocity.VelocityRequestContext;
@@ -53,8 +53,10 @@ public class IssueTypeOptionsProvider implements WebItemProvider {
 
         final String baseUrl = requestContext.getBaseUrl();
 
-        String issueType = (String) ActionContext.getSession().get(SessionKeys.VIEWISSUE_REVIEWS_ISSUETYPE);
-
+        final JiraHelper jiraHelper = (JiraHelper) params.get(JiraWebContext.CONTEXT_KEY_HELPER);
+        String issueType = jiraHelper != null
+                ? (String) jiraHelper.getRequest().getSession().getAttribute(SessionKeys.VIEWISSUE_REVIEWS_ISSUETYPE)
+                : null;
         if (StringUtils.isEmpty(issueType) || issue.getSubTaskObjects().isEmpty()) {
             issueType = DEFAULT_ISSUE_TYPE;
         }
