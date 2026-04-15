@@ -22,6 +22,9 @@ public interface GerritConfiguration {
     String DEFAULT_QUERY_ISSUE = "tr:%s";
     String DEFAULT_QUERY_PROJECT = "message:%s-*";
 
+    int DEFAULT_CACHE_MAX_ENTRIES = 100;
+    int DEFAULT_CACHE_EXPIRE_MINUTES = 30;
+
     String FIELD_SSH_HOSTNAME = "sshHostname";
     String FIELD_SSH_USERNAME = "sshUsername";
     String FIELD_SSH_PORT = "sshPort";
@@ -38,6 +41,11 @@ public interface GerritConfiguration {
     String FIELD_ALL_PROJECTS = "allProjects";
     String FIELD_KNOWN_GERRIT_PROJECTS = "knownGerritProjects";
     String FIELD_USE_GERRIT_PROJECT_WHITELIST = "useGerritProjectWhitelist";
+
+    String FIELD_CACHE_ENABLED = "cacheEnabled";
+    String FIELD_CACHE_EXPIRE_ON_IDLE = "cacheExpireOnIdle";
+    String FIELD_CACHE_MAX_ENTRIES = "cacheMaxEntries";
+    String FIELD_CACHE_EXPIRE_MINUTES = "cacheExpireMinutes";
 
     URI getHttpBaseUrl();
 
@@ -88,6 +96,36 @@ public interface GerritConfiguration {
     boolean getUseGerritProjectWhitelist();
 
     void setUseGerritProjectWhitelist(boolean useGerritProjectWhitelist);
+
+    /**
+     * When {@code true} (the default), review results are cached according to the
+     * max-entries and TTL settings below.
+     * When {@code false}, the cache is completely bypassed: every request queries Gerrit
+     * directly and cache size/TTL settings are ignored.
+     */
+    boolean isCacheEnabled();
+
+    void setCacheEnabled(boolean enabled);
+
+    /**
+     * When {@code true} (the default), the cache uses <em>Time-to-Idle</em>: the expiry timer
+     * resets on every access ({@code expireAfterAccess}).
+     * When {@code false}, the cache uses <em>Time-to-Live</em>: entries expire a fixed duration
+     * after they were written ({@code expireAfterWrite}).
+     */
+    boolean isCacheExpireOnIdle();
+
+    void setCacheExpireOnIdle(boolean tti);
+
+    /** Maximum number of entries to keep in the review cache. */
+    int getCacheMaxEntries();
+
+    void setCacheMaxEntries(int maxEntries);
+
+    /** Cache entry expiry duration in minutes. */
+    int getCacheExpireMinutes();
+
+    void setCacheExpireMinutes(int expireMinutes);
 
     class NotConfiguredException extends RuntimeException {
         public NotConfiguredException() {

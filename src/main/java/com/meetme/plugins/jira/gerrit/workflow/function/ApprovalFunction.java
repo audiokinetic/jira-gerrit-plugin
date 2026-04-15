@@ -18,10 +18,7 @@ import com.meetme.plugins.jira.gerrit.data.IssueReviewsManager;
 import com.meetme.plugins.jira.gerrit.data.dto.GerritChange;
 import com.meetme.plugins.jira.gerrit.workflow.condition.ApprovalScore;
 
-import com.atlassian.core.user.preferences.Preferences;
 import com.atlassian.jira.issue.Issue;
-import com.atlassian.jira.user.ApplicationUser;
-import com.atlassian.jira.user.preferences.UserPreferencesManager;
 import com.atlassian.jira.workflow.function.issue.AbstractJiraFunctionProvider;
 import com.opensymphony.module.propertyset.PropertySet;
 import com.opensymphony.workflow.WorkflowException;
@@ -67,14 +64,12 @@ public class ApprovalFunction extends AbstractJiraFunctionProvider {
 
     private final IssueReviewsManager reviewsManager;
     private final GerritConfiguration configuration;
-    private final UserPreferencesManager prefsManager;
 
-    public ApprovalFunction(GerritConfiguration configuration, IssueReviewsManager reviewsManager, UserPreferencesManager prefsManager) {
+    public ApprovalFunction(GerritConfiguration configuration, IssueReviewsManager reviewsManager) {
         super();
 
         this.configuration = configuration;
         this.reviewsManager = reviewsManager;
-        this.prefsManager = prefsManager;
     }
 
     @Override
@@ -86,13 +81,12 @@ public class ApprovalFunction extends AbstractJiraFunctionProvider {
 
         final Issue issue = getIssue(transientVars);
         final List<GerritChange> issueReviews = getReviews(issue);
-        final Preferences prefs = getUserPrefs(transientVars, args);
         final String cmdArgs = (String) args.get(KEY_CMD_ARGS);
 
         boolean success = false;
 
         try {
-            success = reviewsManager.doApprovals(issue, issueReviews, cmdArgs, prefs);
+            success = reviewsManager.doApprovals(issue, issueReviews, cmdArgs);
         } catch (IOException e) {
             throw new WorkflowException("An error occurred while approving the changes", e);
         }
@@ -101,11 +95,6 @@ public class ApprovalFunction extends AbstractJiraFunctionProvider {
             log.warn("doApprovals() returned false!");
             // throw new WorkflowException("Gerrit failed to perform the approvals!");
         }
-    }
-
-    protected Preferences getUserPrefs(@SuppressWarnings("rawtypes") Map transientVars, @SuppressWarnings("rawtypes") Map args) {
-        final ApplicationUser user = getCaller(transientVars, args);
-        return prefsManager.getPreferences(user);
     }
 
     protected String getIssueKey(@SuppressWarnings("rawtypes") Map transientVars) {

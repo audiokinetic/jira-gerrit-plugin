@@ -69,6 +69,9 @@ public class IssueReviewsManagerTest {
         // gerrit configuration
         when(configuration.getIssueSearchQuery()).thenReturn(GerritConfiguration.DEFAULT_QUERY_ISSUE);
         when(configuration.getProjectSearchQuery()).thenReturn(GerritConfiguration.DEFAULT_QUERY_PROJECT);
+        when(configuration.getCacheMaxEntries()).thenReturn(GerritConfiguration.DEFAULT_CACHE_MAX_ENTRIES);
+        when(configuration.getCacheExpireMinutes()).thenReturn(GerritConfiguration.DEFAULT_CACHE_EXPIRE_MINUTES);
+        when(configuration.isCacheEnabled()).thenReturn(true);
 
         // issue
         when(mockIssue.getKey()).thenReturn(ISSUE_KEY_NEW);
@@ -80,9 +83,9 @@ public class IssueReviewsManagerTest {
         allIssueKeys.add(ISSUE_KEY_NEW);
         when(mockJiraIssueManager.getAllIssueKeys(mockIssue.getId())).thenReturn(allIssueKeys);
 
-        // mock gerrit review retrieval
+        // mock gerrit review retrieval — match any versioned cache name (e.g., "...cache.v0")
         when(mockCacheManager.getCache(
-                eq("com.meetme.plugins.jira.gerrit.data.IssueReviewsManager.issueChanges.cache"),
+                Mockito.anyString(),
                 Mockito.<CacheLoader<String, List<GerritChange>>>any(),
                 any()
         )).thenReturn(mockCache);

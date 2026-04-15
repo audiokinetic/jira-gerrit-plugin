@@ -25,6 +25,12 @@
         <form id="admin" class="aui" enctype="multipart/form-data" method="post" action="">
             <h2>$i18n.getText("gerrit.admin.label")</h2>
 
+            #if ($!cacheFlushed == "true" || $cacheFlushed)
+                <div class="aui-message aui-message-success">
+                    <div><b>$i18n.getText("gerrit.admin.cache.flushed")</b></div>
+                </div>
+            #end
+
             #if ($!testResult == "true")
                 <div class="aui-message aui-message-success">
                     <div><b>Success!</b></div>
@@ -160,14 +166,61 @@
                 <div class="description">$i18n.getText("gerrit.admin.project.whitelist.description")</div>
             </div>
 
+            <h3>$i18n.getText("gerrit.admin.cache.label")</h3>
+
+            <fieldset class="group">
+                <input class="checkbox" type="checkbox" id="cacheEnabled" name="cacheEnabled" value="true"
+                    #if ($!cacheEnabled != "false") checked="checked" #end
+                    onchange="document.getElementById('cacheSettingsDiv').style.display =
+                              this.checked ? '' : 'none';" />
+                <label for="cacheEnabled">$i18n.getText("gerrit.admin.cache.enabled.label")</label>
+                <div class="description">$i18n.getText("gerrit.admin.cache.enabled.description")</div>
+            </fieldset>
+
+            <div id="cacheSettingsDiv" #if ($!cacheEnabled == "false") style="display:none;" #end>
+
+                <div class="field-group">
+                    <label>$i18n.getText("gerrit.admin.cache.expireOnIdle.label")</label>
+                    <div class="radio">
+                        <input class="radio" type="radio" id="cacheExpireOnIdle_tti"
+                               name="cacheExpireOnIdle" value="true"
+                               #if ($!cacheExpireOnIdle != "false") checked="checked" #end />
+                        <label for="cacheExpireOnIdle_tti">$i18n.getText("gerrit.admin.cache.expireOnIdle.tti")</label>
+                    </div>
+                    <div class="radio">
+                        <input class="radio" type="radio" id="cacheExpireOnIdle_ttl"
+                               name="cacheExpireOnIdle" value="false"
+                               #if ($!cacheExpireOnIdle == "false") checked="checked" #end />
+                        <label for="cacheExpireOnIdle_ttl">$i18n.getText("gerrit.admin.cache.expireOnIdle.ttl")</label>
+                    </div>
+                    <div class="description">$i18n.getText("gerrit.admin.cache.expireOnIdle.description")</div>
+                </div>
+
+                <div class="field-group">
+                    <label for="cacheMaxEntries">$i18n.getText("gerrit.admin.cache.maxEntries.label")</label>
+                    <input type="number" id="cacheMaxEntries" name="cacheMaxEntries" class="text short-field"
+                           min="1" max="10000" value="$!cacheMaxEntries" />
+                    <div class="description">$i18n.getText("gerrit.admin.cache.maxEntries.description")</div>
+                </div>
+                <div class="field-group">
+                    <label for="cacheExpireMinutes">$i18n.getText("gerrit.admin.cache.expireMinutes.label")</label>
+                    <input type="number" id="cacheExpireMinutes" name="cacheExpireMinutes" class="text short-field"
+                           min="1" max="1440" value="$!cacheExpireMinutes" />
+                    <div class="description">$i18n.getText("gerrit.admin.cache.expireMinutes.description")</div>
+                </div>
+                <div class="field-group">
+                    <label>$i18n.getText("gerrit.admin.cache.clearCache.label")</label>
+                    <button type="submit" name="action" value="clearCache" class="aui-button">
+                        $i18n.getText("gerrit.admin.cache.clearCache.label")
+                    </button>
+                    <div class="description">$i18n.getText("gerrit.admin.cache.clearCache.description")</div>
+                </div>
+            </div>
+
             <div class="buttons-container">
                 <div class="buttons">
                     <button type="submit" name="action" value="save" class="button submit">Save</button>
                     <button type="submit" name="action" value="test" class="button submit">Test Config</button>
-
-                    #*
-                     * Clear cache button?
-                     *#
                 </div>
             </div>
         </form>

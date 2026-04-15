@@ -15,7 +15,6 @@ package com.meetme.plugins.jira.gerrit.data;
 
 import com.meetme.plugins.jira.gerrit.data.dto.GerritChange;
 
-import com.atlassian.core.user.preferences.Preferences;
 import com.jcraft.jsch.ChannelExec;
 import com.sonymobile.tools.gerrit.gerritevents.ssh.Authentication;
 import com.sonymobile.tools.gerrit.gerritevents.ssh.SshConnection;
@@ -26,20 +25,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
 
 public class GerritCommand {
     private static final Logger log = LoggerFactory.getLogger(GerritCommand.class);
-    private final static String BASE_COMMAND = "gerrit review";
-    private GerritConfiguration config;
-    private Preferences userPreferences;
+    private static final String BASE_COMMAND = "gerrit review";
+    private final GerritConfiguration config;
 
-    public GerritCommand(GerritConfiguration config, Preferences userPreferences) {
+    public GerritCommand(GerritConfiguration config) {
         this.config = config;
-        this.userPreferences = userPreferences;
     }
 
     public boolean doReview(GerritChange change, String args) throws IOException {
@@ -98,31 +94,7 @@ public class GerritCommand {
     }
 
     private Authentication getAuthentication() {
-        Authentication auth = null;
-
-        if (userPreferences != null) {
-            // Attempt to get a per-user authentication mechanism, so JIRA can act as the user.
-            try {
-                String privateKey = userPreferences.getString("gerrit.privateKey");
-                String username = userPreferences.getString("gerrit.username");
-
-                if (privateKey != null && username != null && !privateKey.isEmpty() && !username.isEmpty()) {
-                    File privateKeyFile = new File(privateKey);
-
-                    if (privateKeyFile.exists() && privateKeyFile.canRead()) {
-                        auth = new Authentication(privateKeyFile, username);
-                    }
-                }
-            } catch (Exception exc) {
-                auth = null;
-            }
-        }
-
-        if (auth == null) {
-            auth = new Authentication(config.getSshPrivateKey(), config.getSshUsername());
-        }
-
-        return auth;
+        return new Authentication(config.getSshPrivateKey(), config.getSshUsername());
     }
 
     private boolean runCommand(SshConnection ssh, String command) throws SshException, IOException {

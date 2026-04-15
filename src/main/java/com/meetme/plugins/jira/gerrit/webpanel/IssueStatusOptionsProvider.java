@@ -16,14 +16,14 @@ package com.meetme.plugins.jira.gerrit.webpanel;
 import com.meetme.plugins.jira.gerrit.SessionKeys;
 
 import com.atlassian.jira.issue.Issue;
+import com.atlassian.jira.plugin.webfragment.JiraWebContext;
+import com.atlassian.jira.plugin.webfragment.model.JiraHelper;
 import com.atlassian.jira.security.JiraAuthenticationContext;
 import com.atlassian.jira.util.I18nHelper;
 import com.atlassian.jira.util.velocity.VelocityRequestContext;
 import com.atlassian.jira.util.velocity.VelocityRequestContextFactory;
 import com.atlassian.plugin.web.api.WebItem;
 import com.atlassian.plugin.web.api.provider.WebItemProvider;
-
-import webwork.action.ActionContext;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,8 +49,11 @@ public class IssueStatusOptionsProvider implements WebItemProvider {
         final Issue issue = (Issue) params.get("issue");
 
         final String baseUrl = requestContext.getBaseUrl();
-        String issueStatus = (String) ActionContext.getSession().get(SessionKeys.VIEWISSUE_REVIEWS_ISSUESTATUS);
 
+        final JiraHelper jiraHelper = (JiraHelper) params.get(JiraWebContext.CONTEXT_KEY_HELPER);
+        String issueStatus = jiraHelper != null
+                ? (String) jiraHelper.getRequest().getSession().getAttribute(SessionKeys.VIEWISSUE_REVIEWS_ISSUESTATUS)
+                : null;
         if (issueStatus == null) {
             issueStatus = DEFAULT_STATUS;
         }

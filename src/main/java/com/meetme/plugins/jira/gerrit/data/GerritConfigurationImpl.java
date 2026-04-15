@@ -175,6 +175,52 @@ public class GerritConfigurationImpl implements GerritConfiguration {
     }
 
     @Override
+    public boolean isCacheEnabled() {
+        String value = (String) settings.get(FIELD_CACHE_ENABLED);
+        // Default is true (cache enabled) — only explicitly stored "false" disables it
+        return value == null || !"false".equals(value);
+    }
+
+    @Override
+    public void setCacheEnabled(boolean enabled) {
+        settings.put(FIELD_CACHE_ENABLED, String.valueOf(enabled));
+    }
+
+    @Override
+    public boolean isCacheExpireOnIdle() {
+        String value = (String) settings.get(FIELD_CACHE_EXPIRE_ON_IDLE);
+        // Default is true (Time-to-Idle) — only explicitly stored "false" switches to TTL
+        return value == null || !"false".equals(value);
+    }
+
+    @Override
+    public void setCacheExpireOnIdle(boolean tti) {
+        settings.put(FIELD_CACHE_EXPIRE_ON_IDLE, String.valueOf(tti));
+    }
+
+    @Override
+    public int getCacheMaxEntries() {
+        String value = (String) settings.get(FIELD_CACHE_MAX_ENTRIES);
+        return value == null ? DEFAULT_CACHE_MAX_ENTRIES : Integer.parseInt(value);
+    }
+
+    @Override
+    public void setCacheMaxEntries(int maxEntries) {
+        settings.put(FIELD_CACHE_MAX_ENTRIES, Integer.toString(maxEntries));
+    }
+
+    @Override
+    public int getCacheExpireMinutes() {
+        String value = (String) settings.get(FIELD_CACHE_EXPIRE_MINUTES);
+        return value == null ? DEFAULT_CACHE_EXPIRE_MINUTES : Integer.parseInt(value);
+    }
+
+    @Override
+    public void setCacheExpireMinutes(int expireMinutes) {
+        settings.put(FIELD_CACHE_EXPIRE_MINUTES, Integer.toString(expireMinutes));
+    }
+
+    @Override
     public String toString() {
         return String.format("GerritConfigurationImpl[ssh://{0}@{1}:*****/, {3}; http://{4}:*****@{6}/]", getSshUsername(), getSshHostname(),
                 getSshPort(), getSshPrivateKey(), getHttpUsername(), getHttpPassword(), getHttpBaseUrl());

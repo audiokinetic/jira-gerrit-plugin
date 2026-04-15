@@ -18,8 +18,6 @@ import com.meetme.plugins.jira.gerrit.data.IssueReviewsManager;
 import com.meetme.plugins.jira.gerrit.data.dto.GerritChange;
 import com.meetme.plugins.jira.gerrit.workflow.AbstractWorkflowTest;
 
-import com.atlassian.core.user.preferences.Preferences;
-import com.atlassian.jira.user.preferences.UserPreferencesManager;
 import com.opensymphony.module.propertyset.PropertySet;
 import com.opensymphony.workflow.WorkflowException;
 import com.sonymobile.tools.gerrit.gerritevents.GerritQueryException;
@@ -35,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -43,21 +42,11 @@ import static org.mockito.Mockito.*;
 public abstract class ApprovalFunctionTest extends AbstractWorkflowTest {
     @Mock
     PropertySet ps;
-    @Mock
-    UserPreferencesManager userPrefsManager;
-    @Mock
-    Preferences mockPrefs;
 
     @Before
     public void setUp() throws Exception {
         super.setUp();
-
         setUpUser();
-        setUpUserPrefs();
-    }
-
-    private void setUpUserPrefs() {
-        when(userPrefsManager.getPreferences(mockUser)).thenReturn(mockPrefs);
     }
 
     @After
@@ -66,13 +55,11 @@ public abstract class ApprovalFunctionTest extends AbstractWorkflowTest {
     }
 
     /**
-     * Test method for
-     * {@link ApprovalFunction#ApprovalFunction(GerritConfiguration, IssueReviewsManager, UserPreferencesManager)}
-     * .
+     * Test method for {@link ApprovalFunction#ApprovalFunction(GerritConfiguration, IssueReviewsManager)}.
      */
     @Test
     public void testCtor() {
-        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager, userPrefsManager);
+        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager);
         assertTrue(obj instanceof ApprovalFunction);
     }
 
@@ -81,12 +68,12 @@ public abstract class ApprovalFunctionTest extends AbstractWorkflowTest {
      */
     @Test
     public void testConfigurationReady() {
-        ApprovalFunction obj = new ApprovalFunction(null, null, null);
+        ApprovalFunction obj = new ApprovalFunction(null, null);
         // configuration is null
         assertFalse(obj.isConfigurationReady());
 
-        obj = new ApprovalFunction(configuration, null, null);
-        // configuration is null
+        obj = new ApprovalFunction(configuration, null);
+        // SSH is valid by default via setUpConfiguration()
         assertTrue(obj.isConfigurationReady());
 
         // SSH file not exist
@@ -108,73 +95,65 @@ public abstract class ApprovalFunctionTest extends AbstractWorkflowTest {
 
     /**
      * Test method for {@link ApprovalFunction#execute(Map, Map, PropertySet)}.
-     *
-     * @throws WorkflowException
      */
     @Test(expected = IllegalStateException.class)
     public void testExecute_notReady() throws WorkflowException {
-        ApprovalFunction obj = new ApprovalFunction(null, null, null);
+        ApprovalFunction obj = new ApprovalFunction(null, null);
         obj.execute(null, null, null);
     }
 
     @Test
     public void testGetIssueKey() {
-        ApprovalFunction obj = new ApprovalFunction(configuration, null, null);
+        ApprovalFunction obj = new ApprovalFunction(configuration, null);
         String actual = obj.getIssueKey(transientVars);
         assertEquals("FOO-123", actual);
-    }
-
-    @Test
-    public void testGetUserPrefs() {
-        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager, userPrefsManager);
-        Preferences actual = obj.getUserPrefs(transientVars, args);
-        assertSame(mockPrefs, actual);
     }
 
     @Test(expected = WorkflowException.class)
     public void testGetReviews_failure() throws WorkflowException, GerritQueryException {
         stubFailingReviews();
-        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager, userPrefsManager);
+        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager);
         obj.getReviews(mockIssue);
     }
 
     @Test
     public void testGetReviews_success() throws WorkflowException, GerritQueryException {
         stubOneReview();
-        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager, userPrefsManager);
+        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager);
         List<GerritChange> actual = obj.getReviews(mockIssue);
         assertEquals(1, actual.size());
     }
 
     @SuppressWarnings("unchecked")
-    @Test(expected = WorkflowException.class)
-    public void testExecute_gerritFailed() throws WorkflowException, IOException {
-        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager, userPrefsManager);
-        when(reviewsManager.doApprovals(mockIssue, Mockito.anyList(), Mockito.anyString(), eq(mockPrefs))).thenReturn(false);
+    @Test
+    public void testExecute_gerritFailed() throws WorkflowException, GerritQueryException, IOException {
+        stubOneReview();
+        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager);
+        when(reviewsManager.doApprovals(eq(mockIssue), Mockito.anyList(), Mockito.anyString())).thenReturn(false);
+        // doApprovals returning false does NOT throw — implementation logs a warning instead
         obj.execute(transientVars, args, ps);
 
-        verify(reviewsManager, times(1)).doApprovals(mockIssue, anyList(), anyString(), eq(mockPrefs));
+        verify(reviewsManager, times(1)).doApprovals(eq(mockIssue), anyList(), anyString());
     }
 
     @SuppressWarnings("unchecked")
     @Test(expected = WorkflowException.class)
-    public void testExecute_gerritThrows() throws WorkflowException, IOException {
+    public void testExecute_gerritThrows() throws WorkflowException, GerritQueryException, IOException {
+        stubOneReview();
         IOException exc = new IOException();
-
-        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager, userPrefsManager);
-        when(reviewsManager.doApprovals(mockIssue, Mockito.anyList(), Mockito.anyString(), eq(mockPrefs))).thenThrow(exc);
+        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager);
+        when(reviewsManager.doApprovals(eq(mockIssue), Mockito.anyList(), Mockito.anyString())).thenThrow(exc);
         obj.execute(transientVars, args, ps);
-
-        verify(reviewsManager, times(1)).doApprovals(mockIssue, anyList(), anyString(), eq(mockPrefs));
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testExecute_success() throws WorkflowException, IOException {
-        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager, userPrefsManager);
-        when(reviewsManager.doApprovals(mockIssue, Mockito.anyList(), Mockito.anyString(), eq(mockPrefs))).thenReturn(true);
+    public void testExecute_success() throws WorkflowException, GerritQueryException, IOException {
+        stubOneReview();
+        ApprovalFunction obj = new ApprovalFunction(configuration, reviewsManager);
+        when(reviewsManager.doApprovals(eq(mockIssue), Mockito.anyList(), Mockito.anyString())).thenReturn(true);
         obj.execute(transientVars, args, ps);
 
-        verify(reviewsManager, times(1)).doApprovals(mockIssue, anyList(), anyString(), eq(mockPrefs));
+        verify(reviewsManager, times(1)).doApprovals(eq(mockIssue), anyList(), anyString());
     }
 }
