@@ -33,7 +33,7 @@
     <component-import interface="com.atlassian.sal.api.transaction.TransactionTemplate" key="transactionTemplate" />
     <component-import interface="com.atlassian.sal.api.user.UserManager" key="userManager" />
     <component-import interface="com.atlassian.sal.api.auth.LoginUriProvider" key="loginUriProvider" />
-    <component-import interface="com.atlassian.templaterenderer.velocity.one.six.VelocityTemplateRenderer" key="velocity-renderer" />
+    <component-import interface="com.atlassian.templaterenderer.TemplateRenderer" key="velocity-renderer" />
     <component-import interface="com.atlassian.sal.api.ApplicationProperties" key="applicationProperties" />
     <component-import interface="com.atlassian.sal.api.message.I18nResolver" key="i18nResolver" />
 
