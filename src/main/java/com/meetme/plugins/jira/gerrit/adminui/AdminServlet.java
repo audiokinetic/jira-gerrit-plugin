@@ -14,6 +14,7 @@
 package com.meetme.plugins.jira.gerrit.adminui;
 
 import com.meetme.plugins.jira.gerrit.data.GerritConfiguration;
+import com.meetme.plugins.jira.gerrit.data.IssueReviewsManager;
 
 import com.atlassian.jira.config.util.JiraHome;
 import com.atlassian.jira.project.Project;
@@ -62,6 +63,7 @@ public class AdminServlet extends HttpServlet {
     private static final String FIELD_ACTION = "action";
     private static final String ACTION_SAVE = "save";
     private static final String ACTION_TEST = "test";
+    private static final String ACTION_CLEAR_CACHE = "clearCache";
 
     private static String TEMPLATE_ADMIN = "templates/admin.vm";
 
@@ -71,15 +73,18 @@ public class AdminServlet extends HttpServlet {
     private final JiraHome jiraHome;
     private final ProjectManager projectManager;
     private final GerritConfiguration configurationManager;
+    private final IssueReviewsManager reviewsManager;
 
     public AdminServlet(final UserManager userManager, final LoginUriProvider loginUriProvider, final TemplateRenderer renderer,
-            final JiraHome jiraHome, final GerritConfiguration configurationManager, final ProjectManager projectManager) {
+            final JiraHome jiraHome, final GerritConfiguration configurationManager, final ProjectManager projectManager,
+            final IssueReviewsManager reviewsManager) {
         this.userManager = userManager;
         this.loginUriProvider = loginUriProvider;
         this.renderer = renderer;
         this.jiraHome = jiraHome;
         this.configurationManager = configurationManager;
         this.projectManager = projectManager;
+        this.reviewsManager = reviewsManager;
     }
 
     @Override
@@ -121,6 +126,11 @@ public class AdminServlet extends HttpServlet {
         map.put(GerritConfiguration.FIELD_KNOWN_GERRIT_PROJECTS, projectsUsingGerrit);
         map.put(GerritConfiguration.FIELD_USE_GERRIT_PROJECT_WHITELIST, String.valueOf(config
                 .getUseGerritProjectWhitelist()));
+
+        map.put(GerritConfiguration.FIELD_CACHE_ENABLED, String.valueOf(config.isCacheEnabled()));
+        map.put(GerritConfiguration.FIELD_CACHE_EXPIRE_ON_IDLE, String.valueOf(config.isCacheExpireOnIdle()));
+        map.put(GerritConfiguration.FIELD_CACHE_MAX_ENTRIES, config.getCacheMaxEntries());
+        map.put(GerritConfiguration.FIELD_CACHE_EXPIRE_MINUTES, config.getCacheExpireMinutes());
 
         return map;
     }
@@ -186,6 +196,17 @@ public class AdminServlet extends HttpServlet {
 
         if (ACTION_TEST.equals(action)) {
             performConnectionTest(configurationManager, map);
+        }
+
+        if (ACTION_CLEAR_CACHE.equals(action)) {
+            reviewsManager.flushCache();
+            map.put("cacheFlushed", Boolean.TRUE);
+        }
+
+        // On a plain Save (or any non-test/non-clear action), rebuild the cache so that
+        // any changes to maxEntries or expireMinutes take effect immediately.
+        if (!ACTION_TEST.equals(action) && !ACTION_CLEAR_CACHE.equals(action)) {
+            reviewsManager.reconfigureCache();
         }
 
         return map;
@@ -256,6 +277,19 @@ public class AdminServlet extends HttpServlet {
                 case GerritConfiguration.FIELD_KNOWN_GERRIT_PROJECTS:
                     idsOfSelectedGerritProjects.add(item.getString());
                     break;
+                case GerritConfiguration.FIELD_CACHE_MAX_ENTRIES:
+                    try {
+                        configurationManager.setCacheMaxEntries(Integer.parseInt(item.getString()));
+                    } catch (NumberFormatException ignored) {}
+                    break;
+                case GerritConfiguration.FIELD_CACHE_EXPIRE_MINUTES:
+                    try {
+                        configurationManager.setCacheExpireMinutes(Integer.parseInt(item.getString()));
+                    } catch (NumberFormatException ignored) {}
+                    break;
+                case GerritConfiguration.FIELD_CACHE_EXPIRE_ON_IDLE:
+                    configurationManager.setCacheExpireOnIdle("true".equals(item.getString()));
+                    break;
             }
         }
 
@@ -264,6 +298,9 @@ public class AdminServlet extends HttpServlet {
 
         boolean useGerritProjectWhitelist = allFields.contains(GerritConfiguration.FIELD_USE_GERRIT_PROJECT_WHITELIST);
         configurationManager.setUseGerritProjectWhitelist(useGerritProjectWhitelist);
+
+        boolean cacheEnabled = allFields.contains(GerritConfiguration.FIELD_CACHE_ENABLED);
+        configurationManager.setCacheEnabled(cacheEnabled);
 
         configurationManager.setIdsOfKnownGerritProjects(idsOfSelectedGerritProjects);
     }

@@ -35,11 +35,18 @@ import java.util.concurrent.TimeUnit;
 public class IssueReviewsImpl implements IssueReviewsManager {
     private static final Logger log = LoggerFactory.getLogger(IssueReviewsImpl.class);
 
-    private final Cache<String, List<GerritChange>> cache;
+    /** Base name for the cache; a version suffix is appended on each reconfiguration. */
+    private static final String CACHE_NAME_BASE =
+            IssueReviewsManager.class.getName() + ".issueChanges.cache";
 
-    private GerritConfiguration configuration;
+    private volatile Cache<String, List<GerritChange>> cache;
+    private final GerritConfiguration configuration;
+    private final IssueManager jiraIssueManager;
+    private final CacheManager cacheManager;
+    private final IssueReviewsCacheLoader cacheLoader;
 
-    private IssueManager jiraIssueManager;
+    /** Incremented on each reconfiguration to force a new cache name (and thus new settings). */
+    private volatile int cacheVersion = 0;
 
     public IssueReviewsImpl(
             GerritConfiguration configuration,
@@ -49,16 +56,34 @@ public class IssueReviewsImpl implements IssueReviewsManager {
     ) {
         this.configuration = configuration;
         this.jiraIssueManager = jiraIssueManager;
-        this.cache = cacheManager.getCache(
-                IssueReviewsManager.class.getName() + ".issueChanges.cache",
+        this.cacheManager = cacheManager;
+        this.cacheLoader = cacheLoader;
+        this.cache = buildCache(configuration.getCacheMaxEntries(), configuration.getCacheExpireMinutes());
+        if (configuration.isCacheEnabled()) {
+            log.info("Review cache initialised: maxEntries={}, expireMinutes={}",
+                    configuration.getCacheMaxEntries(), configuration.getCacheExpireMinutes());
+        } else {
+            log.info("Review cache disabled — requests will go directly to Gerrit.");
+        }
+    }
+
+    private Cache<String, List<GerritChange>> buildCache(int maxEntries, int expireMinutes) {
+        var builder = new CacheSettingsBuilder()
+                .flushable()
+                .statisticsEnabled()
+                .maxEntries(maxEntries)
+                .replicateAsynchronously();
+
+        if (configuration.isCacheExpireOnIdle()) {
+            builder = builder.expireAfterAccess(expireMinutes, TimeUnit.MINUTES);
+        } else {
+            builder = builder.expireAfterWrite(expireMinutes, TimeUnit.MINUTES);
+        }
+
+        return cacheManager.getCache(
+                CACHE_NAME_BASE + ".v" + cacheVersion,
                 cacheLoader,
-                new CacheSettingsBuilder()
-                        .flushable()
-                        .statisticsEnabled()
-                        .maxEntries(100)
-                        .replicateAsynchronously()
-                        .expireAfterAccess(30, TimeUnit.MINUTES)
-                        .build()
+                builder.build()
         );
     }
 
@@ -70,23 +95,57 @@ public class IssueReviewsImpl implements IssueReviewsManager {
     @Override
     public List<GerritChange> getReviewsForIssue(Issue issue) throws GerritQueryException {
         List<GerritChange> gerritChanges = new ArrayList<>();
-
         Set<String> allIssueKeys = getIssueKeys(issue);
-        for (String key : allIssueKeys) {
-            try {
-                List<GerritChange> changes = cache.get(key);
-                if (changes != null) gerritChanges.addAll(changes);
-            } catch (CacheException exc) {
-                if (exc.getCause() instanceof GerritQueryException) {
-                    throw (GerritQueryException) exc.getCause();
-                }
 
-                log.error("Error fetching from cache", exc);
-                throw exc;
+        if (!configuration.isCacheEnabled()) {
+            for (String key : allIssueKeys) {
+                try {
+                    List<GerritChange> changes = cacheLoader.load(key);
+                    if (changes != null) gerritChanges.addAll(changes);
+                } catch (CacheException exc) {
+                    if (exc.getCause() instanceof GerritQueryException gqe) {
+                        throw gqe;
+                    }
+                    log.error("Error querying Gerrit directly (cache disabled)", exc);
+                    throw exc;
+                }
+            }
+        } else {
+            for (String key : allIssueKeys) {
+                try {
+                    List<GerritChange> changes = cache.get(key);
+                    if (changes != null) gerritChanges.addAll(changes);
+                } catch (CacheException exc) {
+                    if (exc.getCause() instanceof GerritQueryException gqe) {
+                        throw gqe;
+                    }
+                    log.error("Error fetching from cache", exc);
+                    throw exc;
+                }
             }
         }
 
         return gerritChanges;
+    }
+
+    @Override
+    public void flushCache() {
+        cache.removeAll();
+        log.info("Gerrit reviews cache flushed by administrator.");
+    }
+
+    @Override
+    public synchronized void reconfigureCache() {
+        cache.removeAll();
+        cacheVersion++; // new name so that CacheManager creates a fresh instance with updated settings
+        int maxEntries = configuration.getCacheMaxEntries();
+        int expireMinutes = configuration.getCacheExpireMinutes();
+        cache = buildCache(maxEntries, expireMinutes);
+        if (configuration.isCacheEnabled()) {
+            log.info("Review cache reconfigured: maxEntries={}, expireMinutes={}", maxEntries, expireMinutes);
+        } else {
+            log.info("Review cache reconfigured (disabled — requests go directly to Gerrit).");
+        }
     }
 
     @Override

@@ -36,10 +36,26 @@ public interface IssueReviewsManager {
      * Gets all Gerrit reviews related to the {@link Issue#getKey() specific issue key}.
      *
      * @param issue the JIRA issue
-     * @return A list of {@link GerritChange}s, as retrieved from Gerrit.
+     * @return A list of {@link JSONObject}s, as retrieved from Gerrit.
      * @throws GerritQueryException If any failure occurs while querying the Gerrit server.
+     * @see GerritQueryHandler
      */
     List<GerritChange> getReviewsForIssue(Issue issue) throws GerritQueryException;
+
+    /**
+     * Clears all cached Gerrit review data, forcing a fresh fetch on the next access.
+     * Takes effect immediately. Existing cache settings are preserved.
+     */
+    void flushCache();
+
+    /**
+     * Recreates the cache using the current values of
+     * {@link GerritConfiguration#getCacheMaxEntries()} and
+     * {@link GerritConfiguration#getCacheExpireMinutes()}.
+     * All existing cached entries are discarded. Call this after saving new cache settings
+     * so that the new capacity / TTL take effect immediately without a plugin restart.
+     */
+    void reconfigureCache();
 
     /**
      * Performs approvals/reviews of all changes using the system-level Gerrit credentials.
