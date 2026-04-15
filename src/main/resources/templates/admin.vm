@@ -148,7 +148,7 @@
                 #if ($!useGerritProjectWhitelist == "false") style="display:none;" #end
                 >
                 <label for="projectsUsingGerrit">$i18n.getText("gerrit.admin.project.whitelist")</label>
-                <select id="allProjects" name="knownGerritProjects" multiple="">
+                <select id="allProjects" name="knownGerritProjects" multiple="multiple" class="select">
                     #foreach ($project in $allProjects)
                         <option value="$project.id"
                             #if ($knownGerritProjects.isEmpty() == false && $knownGerritProjects.contains($project))
@@ -157,9 +157,6 @@
                         </option>
                     #end
                 </select>
-                <script>
-                    AJS.$("#allProjects").auiSelect2();
-                </script>
                 <div class="description">$i18n.getText("gerrit.admin.project.whitelist.description")</div>
             </div>
 
